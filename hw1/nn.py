@@ -8,15 +8,7 @@
 
 import numpy as np
 import h5py
-from matplotlib import pyplot as plt
-import random
-from sys import argv
-import sys
 import argparse
-import math
-
-DATASET = "MNISTdata_1.hdf5"
-HIDDEN_DIM = 130
 
 """ 
 	Activation functions
@@ -48,8 +40,6 @@ def read_data(filename):
 	with h5py.File(filename, "r") as data_file:
 		return data_file["x_train"][:], data_file["y_train"][:], data_file["x_test"][:], data_file["y_test"][:]
 		
-
-
 """
  Visualizes a samples as an image
 """
@@ -60,6 +50,7 @@ def visualize(sample, pred):
 	print(pred)
 	plt.show()
 
+
 class NeuralNet:
 	def __init__(self, hiddenDim=0, outputDim=0, inputDim=0):
 		self.d_hidden = hiddenDim
@@ -67,13 +58,16 @@ class NeuralNet:
 		self.d = inputDim
 		self.init_params()
 	
+	"""
+		Init the weights and bias
+	"""
+	def init_params(self):.randn(self.d_hidden, self.d) * np.sqrt(2/self.d)
+		self.b1 = np.zeros((self.d_hidden, 1))
+		self.b2 = np.zeros((self.k, 1)).randn(self.k, self.d_hidden) * np.sqrt(2 / self.d_hidden)
+	
 	def set_data(self, X, Y):
 		self.X = X
 		self.Y = Y
-	def set_test(self, X, Y):
-		self.XT = X
-		self.YT = Y
-
 
 	def get_lr(self, e):
 		if e < 5:
@@ -83,28 +77,14 @@ class NeuralNet:
 		return 0.0001
 
 	"""
-		Init the weights randomly (normal dist) (bias init as 0)
-	"""
-	def init_params(self):
-		self.W  = np.random.randn(self.d_hidden, self.d) * np.sqrt(2/self.d)
-		self.b1 = np.zeros((self.d_hidden, 1))
-		self.b2 = np.zeros((self.k, 1))
-		self.H  = np.random.randn(self.d_hidden, 1) * np.sqrt(self.d_hidden)
-		self.C  = np.random.randn(self.k, self.d_hidden) * np.sqrt(2 / self.d_hidden)
-
-
-	"""
 		Train the model, using sgd
 	"""
-	def train(self, epochs=1, method="sgd"):
+	def train(self, epochs=1):
 		N = self.X.shape[0]
 
 		for e in range(epochs):
-			lr = self.get_lr(e)
-			idx = np.random.permutation(self.X.shape[0])
+			lr = self.get_lr(e).permutation(self.X.shape[0])
 			for n, i in enumerate(idx):
-			#for n in range(N):
-				#i = np.random.randint(0,N)
 				if n % 1000 == 0:
 					print(f"\rProgress: [{'='*(n//1000 + 1)}{' '*(N//1000 - (n//1000+1))}]", end="")
 				x = self.X[i].reshape(-1,1)
@@ -114,7 +94,7 @@ class NeuralNet:
 				self.update_params(dPdW, dPdB1, dPdB2, dPdC, Sigma, lr)
 			acc = self.test(self.X, self.Y)
 			acc2 = self.test(self.XT, self.YT)
-			print(f"\nEpoch {e+1}/{epochs} done!, Training Accuracy: {acc}, Test= {acc2} - {lr}")
+			print(f"\nEpoch {e+1}/{epochs} done!, Training Accuracy: {acc}")
 
 	"""
 		Forward propagate
@@ -150,9 +130,15 @@ class NeuralNet:
 		self.C  -= lr * dPdC
 		self.H  -= lr * Sigma
 
+	"""
+		Save the model to .npy file
+	"""
 	def save(self):
 		np.save("model", np.array((self.W, self.b1, self.b2, self.C)))
 
+	"""
+		Load nn from .npy file
+	"""
 	def load(self, model_name):
 		m = np.load(model_name, allow_pickle=True)
 		self.W  = m[0]
@@ -160,6 +146,9 @@ class NeuralNet:
 		self.b2 = m[2]
 		self.C  = m[3]
 
+	"""
+		Evaulate on test set
+	"""
 	def test(self, X, Y):
 		out = self.forward(X.T)
 		pred = np.argmax(out, axis=0)
@@ -167,6 +156,7 @@ class NeuralNet:
 
 
 def main():
+	# Tweak settings from command line
 	p = argparse.ArgumentParser(description="Neural Network")
 	p.add_argument("mode", type=str, default="train", choices=("train", "load"), help="Run NN training or load exisiting model")
 	p.add_argument("--hidden", default=100, help="Number of hidden layers", dest="hidden")
@@ -175,23 +165,27 @@ def main():
 	p.add_argument("--model", default="model.npy", help=".npy model destination", dest="model")
 	args = p.parse_args()
 
+	# Read data and set output (K) and input (d) dimensions
 	xtrain, ytrain, xtest, ytest = read_data(args.data)
 	K = len(set(ytrain.flatten()))
 	d = xtrain.shape[1]
 
+	# Init model
 	nn = NeuralNet(hiddenDim=args.hidden, outputDim=K, inputDim=d)
 	nn.set_data(xtrain, ytrain)
 	nn.set_test(xtest, ytest)
 
+	# Either train or load prev. model
 	if args.mode == "train":
 		nn.train(epochs=args.epochs)
 		nn.save()
 	elif args.mode == "load":
 		nn.load(p.model)
 	
+	# Calculate test accuracy
 	acc = nn.test(xtest, ytest)
 
-	print(f"Accuracy: {acc}")
+	print(f"Test accuracy: {acc}")
 	
 
 if __name__ == "__main__":
