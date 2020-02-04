@@ -61,9 +61,11 @@ class NeuralNet:
 	"""
 		Init the weights and bias
 	"""
-	def init_params(self):.randn(self.d_hidden, self.d) * np.sqrt(2/self.d)
+	def init_params(self):
+		self.W = np.random.randn(self.d_hidden, self.d) * np.sqrt(2/self.d)
 		self.b1 = np.zeros((self.d_hidden, 1))
-		self.b2 = np.zeros((self.k, 1)).randn(self.k, self.d_hidden) * np.sqrt(2 / self.d_hidden)
+		self.b2 = np.zeros((self.k, 1))
+		self.C = np.random.randn(self.k, self.d_hidden) * np.sqrt(2 / self.d_hidden)
 	
 	def set_data(self, X, Y):
 		self.X = X
@@ -83,7 +85,8 @@ class NeuralNet:
 		N = self.X.shape[0]
 
 		for e in range(epochs):
-			lr = self.get_lr(e).permutation(self.X.shape[0])
+			lr = self.get_lr(e)
+			idx = np.random.permutation(self.X.shape[0])
 			for n, i in enumerate(idx):
 				if n % 1000 == 0:
 					print(f"\rProgress: [{'='*(n//1000 + 1)}{' '*(N//1000 - (n//1000+1))}]", end="")
@@ -93,7 +96,6 @@ class NeuralNet:
 				dPdW, dPdB1, dPdB2, dPdC, Sigma = self.backpropagate(x, y, out)
 				self.update_params(dPdW, dPdB1, dPdB2, dPdC, Sigma, lr)
 			acc = self.test(self.X, self.Y)
-			acc2 = self.test(self.XT, self.YT)
 			print(f"\nEpoch {e+1}/{epochs} done!, Training Accuracy: {acc}")
 
 	"""
@@ -173,7 +175,7 @@ def main():
 	# Init model
 	nn = NeuralNet(hiddenDim=args.hidden, outputDim=K, inputDim=d)
 	nn.set_data(xtrain, ytrain)
-	nn.set_test(xtest, ytest)
+
 
 	# Either train or load prev. model
 	if args.mode == "train":
