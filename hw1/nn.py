@@ -182,7 +182,7 @@ def main():
 		nn.train(epochs=args.epochs)
 		nn.save()
 	elif args.mode == "load":
-		nn.load(p.model)
+		nn.load(args.model)
 	
 	# Calculate test accuracy
 	acc = nn.test(xtest, ytest)
