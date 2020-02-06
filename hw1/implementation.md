@@ -85,42 +85,13 @@ Both the forward and backward algorithm utilize vectorization via numpy for fast
 
 ## Result
 
-An accuracy of 97% was reached using the following settings.
+An accuracy of 97.4% was reached using the following settings.
 
 Param      | Value
 -----------|--------
 `d_hidden` | 100
 `epochs`   | 10
-`LR`       | Piecewise constant
+`LR`       | Piecewise constant (see code)
 Activation | `sigmoid`
-
-
-Printouts from the full training procedure can be seen below,
-
-
-```
-
-Progress: [============================================================]
-Epoch 1/10 done!, Training Accuracy: 0.934, LR: 0.01
-Progress: [============================================================]
-Epoch 2/10 done!, Training Accuracy: 0.95335, LR: 0.01
-Progress: [============================================================]
-Epoch 3/10 done!, Training Accuracy: 0.9612166666666667, LR: 0.01
-Progress: [============================================================]
-Epoch 4/10 done!, Training Accuracy: 0.96985, LR: 0.01
-Progress: [============================================================]
-Epoch 5/10 done!, Training Accuracy: 0.9751666666666666, LR: 0.01
-Progress: [============================================================]
-Epoch 6/10 done!, Training Accuracy: 0.9774166666666667, LR: 0.001
-Progress: [============================================================]
-Epoch 7/10 done!, Training Accuracy: 0.9779833333333333, LR: 0.001
-Progress: [============================================================]
-Epoch 8/10 done!, Training Accuracy: 0.9780166666666666, LR: 0.001
-Progress: [============================================================]
-Epoch 9/10 done!, Training Accuracy: 0.9782333333333333, LR: 0.0001
-Progress: [============================================================]
-Epoch 10/10 done!, Training Accuracy: 0.9784166666666667, LR: 0.0001
-
-Test Accuracy: 0.9709
 
 ```
