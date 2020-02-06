@@ -62,16 +62,18 @@ class NeuralNet:
 		Init the weights and bias
 	"""
 	def init_params(self):
-		self.W = np.random.randn(self.d_hidden, self.d) * np.sqrt(2/self.d)
-		self.b1 = np.zeros((self.d_hidden, 1))
-		self.b2 = np.zeros((self.k, 1))
-		self.C = np.random.randn(self.k, self.d_hidden) * np.sqrt(2 / self.d_hidden)
+		self.W = np.random.normal(0, 1/(2*self.d), size=(self.d_hidden, self.d))
+		self.b1 = np.random.normal(0, 1/2, size=(self.d_hidden, 1))
+		self.b2 = np.random.normal(0, 1/2, size=(self.k, 1))
+		self.C = np.random.normal(0, 1/(2*self.d_hidden), size=(self.k, self.d_hidden))
 	
 	def set_data(self, X, Y):
 		self.X = X
 		self.Y = Y
 
 	def get_lr(self, e):
+		if e < 1:
+			return 0.1
 		if e < 5:
 			return 0.01
 		if e < 8:
