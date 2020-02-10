@@ -43,44 +43,13 @@ optional arguments:
 Requires python ver `3.6` or higher (due to usage of f-string formatting) and numpy.
 
 
-### Imlpementation
+### Implementation
 
 The main part of the program is the class `NeuralNetwork`, which contains all relevant methods needed for training and evaluating the network. Other than that, auxillary functions include different activation functions and a function for loading the data set from file.
 
+Both the forward and backward algorithm utilize vectorization via numpy for faster calculations. The `train` method of the class takes the number of epochs as input, and then performs stochastic gradient descent to update the parameters. At the start of each epoch, an array of indices is created at random. These indices are then used to choose the random points used in the forward and backward steps. The learning rate is also, potentially, updated at the start of each epoch. After each epoch, the training accuracy is displayed and after the training stops the test accuracy is calculated as : 
 
-Both the forward and backward algorithm utilize vectorization via numpy for faster calculations. The training is carried out using stochastic gradient descent.
-
-**Forward**
-
-```python
-
-"""
-		Forward propagate
-	"""
-	def forward(self, x):
-		self.Z = np.dot(self.W, x) + self.b1
-		self.H = sigmoid(self.Z)
-		self.U = np.dot(self.C, self.H) + self.b2
-		return softmax(self.U)
-
-
-```
-
-**Backward**
-
-```python
-
-	def backpropagate(self, x, y, out):
-		dPdU = out
-		dPdU[y]  -= 1
-		dPdB2 = dPdU
-		dPdC  = np.dot(dPdU, self.H.T)
-		Sigma = np.dot(self.C.T, dPdU)
-		dPdB1 = Sigma * back_sigmoid(self.Z)
-		dPdW  = np.dot(dPdB1, x.T) 
-		return dPdW, dPdB1, dPdB2, dPdC, Sigma
-```
-
+`# Correct Classified / Total # test samples`
 
 
 ## Result
@@ -93,5 +62,3 @@ Param      | Value
 `epochs`   | 10
 `LR`       | Piecewise constant (see code)
 Activation | `sigmoid`
-
-```

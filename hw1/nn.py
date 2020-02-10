@@ -40,16 +40,6 @@ def read_data(filename):
 	with h5py.File(filename, "r") as data_file:
 		return data_file["x_train"][:], data_file["y_train"][:], data_file["x_test"][:], data_file["y_test"][:]
 		
-"""
- Visualizes a samples as an image
-"""
-def visualize(sample, pred):
-	dim = int(np.sqrt(sample.shape[0]))
-	sq = sample.reshape(dim, dim)
-	plt.imshow(sq)
-	print(pred)
-	plt.show()
-
 
 class NeuralNet:
 	def __init__(self, hiddenDim=0, outputDim=0, inputDim=0):
@@ -62,10 +52,10 @@ class NeuralNet:
 		Init the weights and bias
 	"""
 	def init_params(self):
-		self.W = np.random.normal(0, 1/(2*self.d), size=(self.d_hidden, self.d))
-		self.b1 = np.random.normal(0, 1/2, size=(self.d_hidden, 1))
-		self.b2 = np.random.normal(0, 1/2, size=(self.k, 1))
-		self.C = np.random.normal(0, 1/(2*self.d_hidden), size=(self.k, self.d_hidden))
+		self.W  = np.random.normal(0, 1/self.d, size=(self.d_hidden, self.d))
+		self.b1 = np.random.normal(0, 1, size=(self.d_hidden, 1))
+		self.b2 = np.random.normal(0, 1, size=(self.k, 1))
+		self.C  = np.random.normal(0, 1/self.d_hidden, size=(self.k, self.d_hidden))
 	
 	def set_data(self, X, Y):
 		self.X = X
@@ -175,13 +165,13 @@ def main():
 	d = xtrain.shape[1]
 
 	# Init model
-	nn = NeuralNet(hiddenDim=args.hidden, outputDim=K, inputDim=d)
+	nn = NeuralNet(hiddenDim=int(args.hidden), outputDim=K, inputDim=d)
 	nn.set_data(xtrain, ytrain)
 
 
 	# Either train or load prev. model
 	if args.mode == "train":
-		nn.train(epochs=args.epochs)
+		nn.train(epochs=int(args.epochs))
 		nn.save()
 	elif args.mode == "load":
 		nn.load(args.model)
