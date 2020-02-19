@@ -30,14 +30,31 @@ def back_sigmoid(Z):
 	return s * (1-s)
 
 
-def conv(x, k):
-	k_x, k_y = k.shape
-	d = x.shape[0]
-	out = np.zeros((d-k_y+1, d-k_x+1))
-	for i in range(out.shape[0]):
-		for j in range(out.shape[1]):
-			out[i,j] = np.sum(np.multiply(k, x[i:i+k_y, j:j+k_x]))
-	return out
+# def conv(x, k):
+# 	k_x, k_y = k.shape
+# 	d = x.shape[0]
+# 	out = np.zeros((d-k_y+1, d-k_x+1))
+# 	for i in range(out.shape[0]):
+# 		for j in range(out.shape[1]):
+# 			out[i,j] = np.sum(np.multiply(k, x[i:i+k_y, j:j+k_x]))
+# 	return out
+
+def vec_conv(x, k):
+	k_y, k_x, k_ch = k.shape
+	d_out = x.shape[0] - k_y + 1
+
+	k_matrix = np.zeros((k_ch, k_y*k_x))
+	for p in range(k_ch):
+		k_matrix[p, :] = k[:,:,p].flatten()
+	
+	x_matrix = np.zeros((k_y*k_x, d_out*d_out))
+	col = 0
+	for i in range(d_out):
+		for j in range(d_out):
+			x_matrix[:, col] = x[i:i+k_y, j:j+k_x].flatten()
+			col += 1
+	
+	return np.dot(k_matrix, x_matrix).T.reshape(d_out, d_out, k_ch)
 
 
 """
@@ -54,7 +71,7 @@ def read_data(filename):
 
 class NeuralNet:
 	def __init__(self, outputDim=0, inputDim=0, filter_size=0, number_channels=0):
-		self.k = outputDim
+		self.classes = outputDim
 		self.k_dim = filter_size
 		self.d = inputDim
 		self.Ch = number_channels
@@ -64,9 +81,9 @@ class NeuralNet:
 		Init the weights and bias
 	"""
 	def init_params(self):
-		self.W = np.random.randn(self.k, self.Ch, self.d-self.k_dim+1, self.d-self.k_dim+1)
-		self.K = np.random.randn(self.Ch, self.k_dim, self.k_dim)
-		self.b = np.random.randn(self.k, 1)
+		self.W = np.random.randn(self.classes, self.d-self.k_dim+1, self.d-self.k_dim+1, self.Ch) * np.sqrt(2 / (self.d * self.d))
+		self.K = np.random.randn(self.k_dim, self.k_dim, self.Ch) * np.sqrt(2 / (self.d * self.d))
+		self.b = np.zeros((self.classes, 1))
 	
 	def set_data(self, X, Y):
 		self.X = X
@@ -91,7 +108,6 @@ class NeuralNet:
 			lr = 0.01
 			idx = np.random.permutation(self.X.shape[0])
 			for n, i in enumerate(idx):
-				#print(f"\r{n}", end="")
 				if n % 1000 == 0:
 				   	print(f"\rProgress: [{'='*(n//1000 + 1)}{' '*(N//1000 - (n//1000+1))}]", end="")
 				x = self.X[i].reshape(self.d,self.d)
@@ -106,16 +122,14 @@ class NeuralNet:
 		Forward propagate
 	"""
 	def forward(self, x):
-		self.Z = np.zeros((self.Ch, self.d-self.k_dim+1, self.d-self.k_dim+1))
-		for c in range(self.Ch):
-			self.Z[c] = signal.convolve(x, self.K[c],mode="valid")
+		self.Z = vec_conv(x, self.K)
 		self.H = sigmoid(self.Z)
-		
-		# (K C I J) X (C I J) => Reduce axis CIJ i.e. 1.2.3 and 0,1,2 respectively
-		self.U = np.tensordot(self.W, self.H, axes=((1,2,3), (0,1,2)))
-		self.U = self.U.reshape(-1,1) + self.b
-		return softmax(self.U+self.b)
 
+		self.U = np.zeros((self.classes, 1))
+		for k in range(self.classes):
+			self.U[k] = np.sum(np.multiply(self.W[k,:,:,:], self.H))
+		self.U += self.b
+		return softmax(self.U)
 
 	"""
 		Calculate the gradients
@@ -124,20 +138,12 @@ class NeuralNet:
 		dPdU = np.zeros(out.shape)
 		dPdU[y] = -1
 		dPdU += out
-
+		Delta = np.tensordot(dPdU.flatten(), self.W, axes=((0), (0)))
 		dPdW = np.zeros(self.W.shape)
-		for k in range(self.k):
-			dPdW[k] = dPdU[k]*self.H
-
-		# Eliminate the first axis of dPdU and W via summation
-		Delta = np.tensordot(dPdU.flatten(), self.W, axes=((0),(0)))
-		dPdK = np.zeros((self.Ch, self.k_dim, self.k_dim))
-		for c in range(self.Ch):
-			dPdK[c] = signal.convolve(x, np.multiply(back_sigmoid(self.Z[c,:,:]), Delta[c,:,:]), mode="valid")
+		for k in range(self.classes):
+			dPdW[k] = dPdU[k] * self.H
+		dPdK = vec_conv(x, np.multiply(back_sigmoid(self.Z), Delta ))
 		return dPdU, dPdK, dPdW
-
-
-
 
 
 	"""
@@ -152,20 +158,22 @@ class NeuralNet:
 		Save the model to .npy file
 	"""
 	def save(self):
-		#np.save("model", np.array((self.W, self.b1, self.b2, self.C)))
-		pass
+		np.save("model", np.array((self.W, self.K, self.b)))
 	"""
 		Load nn from .npy file
 	"""
 	def load(self, model_name):
 		m = np.load(model_name, allow_pickle=True)
+		self.W = m[0]
+		self.K = m[1]
+		self.b = m[2]
 		
 
 	"""
 		Evaulate on test set
 	"""
 	def test(self, X, Y):
-		out = np.zeros((X.shape[0], self.k))
+		out = np.zeros((X.shape[0], self.classes))
 		for i in range(X.shape[0]):
 			out[i] = self.forward(X[i].reshape(28,28)).flatten()
 		pred = np.argmax(out, axis=1)
@@ -177,7 +185,7 @@ def main():
 	p = argparse.ArgumentParser(description="Neural Network")
 	p.add_argument("mode", type=str, default="train", choices=("train", "load"), help="Run NN training or load exisiting model")
 	p.add_argument("--channels", default=3, help="Number of channels", dest="channels")
-	p.add_argument("--filter", default=3, help="Filter dimensions", dest="filter_dim")
+	p.add_argument("--filter", default=7, help="Filter dimensions", dest="filter_dim")
 	p.add_argument("--epochs", default=10, help="Number of epochs", dest="epochs")
 	p.add_argument("--data", default="MNISTdata_1.hdf5", help="Dataset destination", dest="data")
 	p.add_argument("--model", default="model.npy", help=".npy model destination", dest="model")
