@@ -9,7 +9,6 @@
 import numpy as np
 import h5py
 import argparse
-from scipy import signal
 import time
 
 """ 
@@ -70,13 +69,13 @@ def read_data(filename):
 		return data_file["x_train"][:], data_file["y_train"][:], data_file["x_test"][:], data_file["y_test"][:]
 		
 
-class NeuralNet:
+class CNN:
 	def __init__(self, outputDim=0, inputDim=0, filter_size=0, number_channels=0):
 		self.classes = outputDim
 		self.k_dim = filter_size
 		self.d = inputDim
 		self.Ch = number_channels
-		self.lr = 0.001
+		self.lr = 0.01
 		self.init_params()
 	
 	"""
@@ -99,7 +98,6 @@ class NeuralNet:
 
 		for e in range(epochs):
 			start = time.time()
-			lr = 0.01
 			idx = np.random.permutation(self.X.shape[0])
 			for n, i in enumerate(idx):
 				if n % 1000 == 0:
@@ -108,7 +106,7 @@ class NeuralNet:
 				y = self.Y[i]
 				out = self.forward(x)
 				dPdB, dPdK, dPdW = self.backpropagate(x, y, out)
-				self.update_params(dPdB, dPdK, dPdW, lr)
+				self.update_params(dPdB, dPdK, dPdW)
 			end = time.time()
 			acc = self.test(self.X, self.Y)
 			print(f"\nEpoch {e+1}/{epochs} done!, Training Accuracy: {acc}, Time: {end-start}")
@@ -144,10 +142,10 @@ class NeuralNet:
 	"""
 		Update params by taking a step in the opposite direction of the gradients.
 	"""
-	def update_params(self, dPdB, dPdK, dPdW, lr):
-		self.b -= lr * dPdB
-		self.W -= lr * dPdW
-		self.K -= lr * dPdK
+	def update_params(self, dPdB, dPdK, dPdW):
+		self.b -= self.lr * dPdB
+		self.W -= self.lr * dPdW
+		self.K -= self.lr * dPdK
 
 	"""
 		Save the model to .npy file
@@ -174,30 +172,21 @@ class NeuralNet:
 		Evaulate on test set
 	"""
 	def test(self, X, Y):
-		# out = np.zeros((X.shape[0], self.classes))
-		# for i in range(X.shape[0]):
-		# 	out[i] = self.forward(X[i].reshape(28,28)).flatten()
-		# pred = np.argmax(out, axis=1)
-		# return np.mean(np.int32(pred.reshape(-1, 1) == Y))
-
-		print(X.shape[0])
-		tot = X.shape[0]
-		corr = 0
+		out = np.zeros((X.shape[0], self.classes))
 		for i in range(X.shape[0]):
-			out = self.forward(X[i].reshape(28,28)).flatten()
-			pred = np.argmax(out)
-			corr += (int(pred) == Y[i])
-		return corr / tot
+			out[i] = self.forward(X[i].reshape(28,28)).flatten()
+		pred = np.argmax(out, axis=1)
+		return np.mean(np.int32(pred.reshape(-1, 1) == Y))
 
 def main():
 	# Tweak settings from command line
 	p = argparse.ArgumentParser(description="Neural Network")
 	p.add_argument("mode", type=str, default="train", choices=("train", "load"), help="Run NN training or load exisiting model")
-	p.add_argument("--channels", default=3, help="Number of channels", dest="channels")
-	p.add_argument("--filter", default=7, help="Filter dimensions", dest="filter_dim")
+	p.add_argument("--channels", default=8, help="Number of channels", dest="channels")
+	p.add_argument("--filter", default=3, help="Filter dimensions", dest="filter_dim")
 	p.add_argument("--epochs", default=10, help="Number of epochs", dest="epochs")
-	p.add_argument("--data", default="MNISTdata_1.hdf5", help="Dataset destination", dest="data")
-	p.add_argument("--model", default="model.npy", help=".npy model destination", dest="model")
+	p.add_argument("--data", default="MNISTdata_1.hdf5", help="Dataset path", dest="data")
+	p.add_argument("--model", default="model.npy", help=".npy model path", dest="model")
 	args = p.parse_args()
 
 	# Read data and set output (K) and input (d) dimensions
@@ -206,7 +195,7 @@ def main():
 	d = int(np.sqrt(xtrain.shape[1]))
 
 	# Init model
-	nn = NeuralNet(
+	nn = CNN(
 		outputDim=K, 
 		inputDim=d,
 		filter_size=int(args.filter_dim), 
