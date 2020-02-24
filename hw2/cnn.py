@@ -10,6 +10,7 @@ import numpy as np
 import h5py
 import argparse
 from scipy import signal
+import time
 
 """ 
 	Activation functions
@@ -75,6 +76,7 @@ class NeuralNet:
 		self.k_dim = filter_size
 		self.d = inputDim
 		self.Ch = number_channels
+		self.lr = 0.001
 		self.init_params()
 	
 	"""
@@ -82,21 +84,12 @@ class NeuralNet:
 	"""
 	def init_params(self):
 		self.W = np.random.randn(self.classes, self.d-self.k_dim+1, self.d-self.k_dim+1, self.Ch) * np.sqrt(2 / (self.d * self.d))
-		self.K = np.random.randn(self.k_dim, self.k_dim, self.Ch) * np.sqrt(2 / (self.d * self.d))
+		self.K = np.random.randn(self.k_dim, self.k_dim, self.Ch) * np.sqrt(2 / (self.k_dim * self.k_dim))
 		self.b = np.zeros((self.classes, 1))
 	
 	def set_data(self, X, Y):
 		self.X = X
 		self.Y = Y
-
-	def get_lr(self, e):
-		if e < 1:
-			return 0.1
-		if e < 5:
-			return 0.01
-		if e < 8:
-			return 0.001
-		return 0.0001
 
 	"""
 		Train the model, using sgd
@@ -105,6 +98,7 @@ class NeuralNet:
 		N = self.X.shape[0]
 
 		for e in range(epochs):
+			start = time.time()
 			lr = 0.01
 			idx = np.random.permutation(self.X.shape[0])
 			for n, i in enumerate(idx):
@@ -115,15 +109,16 @@ class NeuralNet:
 				out = self.forward(x)
 				dPdB, dPdK, dPdW = self.backpropagate(x, y, out)
 				self.update_params(dPdB, dPdK, dPdW, lr)
+			end = time.time()
 			acc = self.test(self.X, self.Y)
-			print(f"\nEpoch {e+1}/{epochs} done!, Training Accuracy: {acc}")
+			print(f"\nEpoch {e+1}/{epochs} done!, Training Accuracy: {acc}, Time: {end-start}")
 
 	"""
 		Forward propagate
 	"""
 	def forward(self, x):
 		self.Z = vec_conv(x, self.K)
-		self.H = sigmoid(self.Z)
+		self.H = relu(self.Z)
 
 		self.U = np.zeros((self.classes, 1))
 		for k in range(self.classes):
@@ -142,7 +137,7 @@ class NeuralNet:
 		dPdW = np.zeros(self.W.shape)
 		for k in range(self.classes):
 			dPdW[k] = dPdU[k] * self.H
-		dPdK = vec_conv(x, np.multiply(back_sigmoid(self.Z), Delta ))
+		dPdK = vec_conv(x, np.multiply(back_relu(self.Z), Delta ))
 		return dPdU, dPdK, dPdW
 
 
@@ -157,8 +152,8 @@ class NeuralNet:
 	"""
 		Save the model to .npy file
 	"""
-	def save(self):
-		np.save("model", np.array((self.W, self.K, self.b)))
+	def save(self, epochs):
+		np.save("model", np.array((self.W, self.K, self.b, epochs)))
 	"""
 		Load nn from .npy file
 	"""
@@ -167,18 +162,32 @@ class NeuralNet:
 		self.W = m[0]
 		self.K = m[1]
 		self.b = m[2]
+		try:
+			epochs = m[3]
+		except: 
+			print("No epoch info")
+			return -1
+		return epochs
 		
 
 	"""
 		Evaulate on test set
 	"""
 	def test(self, X, Y):
-		out = np.zeros((X.shape[0], self.classes))
-		for i in range(X.shape[0]):
-			out[i] = self.forward(X[i].reshape(28,28)).flatten()
-		pred = np.argmax(out, axis=1)
-		return np.mean(np.int32(pred.reshape(-1, 1) == Y))
+		# out = np.zeros((X.shape[0], self.classes))
+		# for i in range(X.shape[0]):
+		# 	out[i] = self.forward(X[i].reshape(28,28)).flatten()
+		# pred = np.argmax(out, axis=1)
+		# return np.mean(np.int32(pred.reshape(-1, 1) == Y))
 
+		print(X.shape[0])
+		tot = X.shape[0]
+		corr = 0
+		for i in range(X.shape[0]):
+			out = self.forward(X[i].reshape(28,28)).flatten()
+			pred = np.argmax(out)
+			corr += (int(pred) == Y[i])
+		return corr / tot
 
 def main():
 	# Tweak settings from command line
@@ -194,12 +203,12 @@ def main():
 	# Read data and set output (K) and input (d) dimensions
 	xtrain, ytrain, xtest, ytest = read_data(args.data)
 	K = len(set(ytrain.flatten()))
-	d = xtrain.shape[1]
+	d = int(np.sqrt(xtrain.shape[1]))
 
 	# Init model
 	nn = NeuralNet(
 		outputDim=K, 
-		inputDim=int(np.sqrt(d)),
+		inputDim=d,
 		filter_size=int(args.filter_dim), 
 		number_channels=int(args.channels)
 	)
@@ -210,9 +219,10 @@ def main():
 	# Either train or load prev. model
 	if args.mode == "train":
 		nn.train(epochs=int(args.epochs))
-		nn.save()
+		nn.save(int(args.epochs))
 	elif args.mode == "load":
-		nn.load(args.model)
+		epochs = nn.load(args.model)
+		print(f"Loaded model: W dim: {nn.W.shape}, K dim: {nn.K.shape}, Epochs: {epochs}")
 	
 	# Calculate test accuracy
 	acc = nn.test(xtest, ytest)
