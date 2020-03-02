@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
 import h5py
+import numpy as np
 
 
 """
@@ -35,25 +37,31 @@ init Architecture
 
 EPOCHS = 10
 LR = 0.001
-DATASET = ""
+DATASET = "CIFAR10.hdf5"
+BATCH_SIZE = 128
 
 
-f = h5py.File(DATASET)
-x_train = f["X_train"][:]
-y_train = f["Y_train"][:]
-x_test = f["X_test"][:]
-y_test = f["Y_test"][:]
+device = "cuda" if torch.cuda.is_available else "cpu"
+
+
+f = h5py.File(DATASET, "r")
+x_train = np.float32(f["X_train"][:])
+y_train = np.int32(f["Y_train"][:])
+x_test = np.float32(f["X_test"][:])
+y_test = np.int32(f["Y_test"][:])
+
+print("Data Loaded...")
 
 class Net(nn.Module):
 	def __init__(self):
 		super(Net, self).__init__()
 
 		# Convolutional layers
-		self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=4, stride=1, padding=2)
-		self.conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2)
-		self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2)
-		self.conv4 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2)
-		self.conv5 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2)
+		self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=4, stride=1, padding=(2, 2))
+		self.conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=(2, 2))
+		self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=(2, 2))
+		self.conv4 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=(2, 2))
+		self.conv5 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=(2, 2))
 
 		self.conv6 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0)
 		self.conv7 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0)
@@ -61,8 +69,8 @@ class Net(nn.Module):
 
 
 		# Fully connected
-		self.fc1 = nn.Linear(in_features=4096, out_features=500)
-		self.fc2 = nn.Linear(in_features=500, out_features=500) # Set out = Num classes
+		self.fc1 = nn.Linear(in_features=1024, out_features=500)
+		self.fc2 = nn.Linear(in_features=500, out_features=10) # Set out = Num classes
 
 		# Batch Normalization
 		self.Bnorm1 = nn.BatchNorm2d(64)
@@ -75,7 +83,7 @@ class Net(nn.Module):
 		self.dropout1 = nn.Dropout(0.1)
 		self.dropout2 = nn.Dropout(0.1)
 		self.dropout3 = nn.Dropout(0.1)
-		self.dropout4 = nn.Dropout(0.1)
+		self.dropout4 = nn.Dropout(0.2)
 
 		# Maxpool
 		self.pool = nn.MaxPool2d(2,2)
@@ -103,30 +111,81 @@ class Net(nn.Module):
 		out = self.Bnorm5(F.relu(self.conv8(out)))
 		out = self.dropout4(out)
 		# Layer 9
-		out = out.view(-1, x.size(0)) # Flatten
+		out = out.view(x.size(0), -1) # Flatten
 		out = F.relu(self.fc1(out))
 		# Layer 10
-		out = F.relu(self.fc2(out))
+		out = self.fc2(out)
 		return out
 
 
+def evaluate(data, targets):
+	acc = 0.0
+	batch_acc = []
+	with torch.no_grad():
+		for i in range(0, len(targets), BATCH_SIZE):
+			data_batch = data[i:i+BATCH_SIZE, :]
+			target_batch = targets[i:i+BATCH_SIZE]
+			d, t = Variable(data_batch).to(device), Variable(target_batch).to(device)
+			out  = model(d)
+			prediction = out.max(1)[1]
+			batch_acc.append(float(prediction.eq(t.data).sum()) / float(BATCH_SIZE))
+		acc = sum(batch_acc) / len(batch_acc)
+	return acc
+
 
 model = Net()
-print(model)
-	
+model.to(device)
+
+print("Model setup...")
+
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.RMSprop(model.parameters(), lr=LR)
 
 
+x_train = torch.FloatTensor(x_train)
+y_train = torch.LongTensor(y_train)
+x_test = torch.FloatTensor(x_test)
+y_test = torch.LongTensor(y_test)
+
+
+"""
+	Training
+"""
+print("Training")
 for e in range(EPOCHS):
 	model.train()
+	indices = np.random.permutation(len(y_train))
 
-	"""
-		Training
-	"""
+	x_train = x_train[indices, :]
+	y_train = y_train[indices]
+
+	for i in range(0, len(y_train), BATCH_SIZE):
+		#x_batch = torch.FloatTensor(x_train[i:i+BATCH_SIZE, :])
+		x_batch = x_train[i:i+BATCH_SIZE, :]
+		y_batch = y_train[i:i+BATCH_SIZE]
+
+		x, y = Variable(x_batch).to(device), Variable(y_batch).to(device)
+
+		optimizer.zero_grad()
+		out = model(x)
+		loss = criterion(out, y)
+		loss.backward()
+
+		optimizer.step()
+		print(f"\rEpoch {e+1}. Batch {i // BATCH_SIZE} of {len(y_train)//BATCH_SIZE}, Loss: {loss}", end="")
 
 
-	model.eval()
 
 	"""
 		EVAL
 	"""
+
+	print("\nEval...")
+	model.eval()
+		
+	train_acc = evaluate(x_train, y_train)
+	test_acc = evaluate(x_test, y_test)
+
+	print(f"Training Accuracy: {train_acc}")
+	print(f"Test Accuracy: {test_acc}")
 
