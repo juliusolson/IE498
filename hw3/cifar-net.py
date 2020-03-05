@@ -35,22 +35,23 @@ init Architecture
 
 """
 
-EPOCHS = 10
+EPOCHS = 20
 LR = 0.001
-DATASET = "CIFAR10.hdf5"
-BATCH_SIZE = 128
+DATASET = "/projects/eot/bbby/CIFAR10.hdf5"
+#DATASET = "CIFAR10.hdf5"
+BATCH_SIZE = 64
 
 
-device = "cuda" if torch.cuda.is_available else "cpu"
+#device = "cuda" if torch.cuda.is_available else "cpu"
 
 
+print("Loading Data...")
 f = h5py.File(DATASET, "r")
 x_train = np.float32(f["X_train"][:])
 y_train = np.int32(f["Y_train"][:])
 x_test = np.float32(f["X_test"][:])
 y_test = np.int32(f["Y_test"][:])
 
-print("Data Loaded...")
 
 class Net(nn.Module):
 	def __init__(self):
@@ -69,8 +70,9 @@ class Net(nn.Module):
 
 
 		# Fully connected
-		self.fc1 = nn.Linear(in_features=1024, out_features=500)
-		self.fc2 = nn.Linear(in_features=500, out_features=10) # Set out = Num classes
+		self.fc1 = nn.Linear(in_features=1024, out_features=512)
+		self.fc2 = nn.Linear(in_features=512, out_features=256) # Set out = Num classes
+		self.fc3 = nn.Linear(in_features=256, out_features=10)
 
 		# Batch Normalization
 		self.Bnorm1 = nn.BatchNorm2d(64)
@@ -114,39 +116,33 @@ class Net(nn.Module):
 		out = out.view(x.size(0), -1) # Flatten
 		out = F.relu(self.fc1(out))
 		# Layer 10
-		out = self.fc2(out)
+		out = F.relu(self.fc2(out))
+		out = self.fc3(out)
 		return out
 
 
 def evaluate(data, targets):
 	acc = 0.0
 	batch_acc = []
-	with torch.no_grad():
-		for i in range(0, len(targets), BATCH_SIZE):
-			data_batch = data[i:i+BATCH_SIZE, :]
-			target_batch = targets[i:i+BATCH_SIZE]
-			d, t = Variable(data_batch).to(device), Variable(target_batch).to(device)
-			out  = model(d)
-			prediction = out.max(1)[1]
-			batch_acc.append(float(prediction.eq(t.data).sum()) / float(BATCH_SIZE))
-		acc = sum(batch_acc) / len(batch_acc)
+	#with torch.no_grad():
+	for i in range(0, len(targets), BATCH_SIZE):
+		data_batch = torch.FloatTensor(data[i:i+BATCH_SIZE, :])
+		target_batch = torch.LongTensor(targets[i:i+BATCH_SIZE])
+		d, t = Variable(data_batch).cuda(), Variable(target_batch).cuda()
+		out  = model(d)			
+		prediction = out.max(1)[1]
+		batch_acc.append(float(prediction.eq(t).sum()) / float(BATCH_SIZE))
+	acc = sum(batch_acc) / len(batch_acc)
 	return acc
 
 
 model = Net()
-model.to(device)
+model.cuda()
 
 print("Model setup...")
 
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.RMSprop(model.parameters(), lr=LR)
-
-
-x_train = torch.FloatTensor(x_train)
-y_train = torch.LongTensor(y_train)
-x_test = torch.FloatTensor(x_test)
-y_test = torch.LongTensor(y_test)
-
 
 """
 	Training
@@ -161,10 +157,10 @@ for e in range(EPOCHS):
 
 	for i in range(0, len(y_train), BATCH_SIZE):
 		#x_batch = torch.FloatTensor(x_train[i:i+BATCH_SIZE, :])
-		x_batch = x_train[i:i+BATCH_SIZE, :]
-		y_batch = y_train[i:i+BATCH_SIZE]
+		x_batch = torch.FloatTensor(x_train[i:i+BATCH_SIZE, :])
+		y_batch = torch.LongTensor(y_train[i:i+BATCH_SIZE])
 
-		x, y = Variable(x_batch).to(device), Variable(y_batch).to(device)
+		x, y = Variable(x_batch).cuda(), Variable(y_batch).cuda()
 
 		optimizer.zero_grad()
 		out = model(x)
@@ -172,7 +168,7 @@ for e in range(EPOCHS):
 		loss.backward()
 
 		optimizer.step()
-		print(f"\rEpoch {e+1}. Batch {i // BATCH_SIZE} of {len(y_train)//BATCH_SIZE}, Loss: {loss}", end="")
+		#print(f"\rEpoch {e+1}. Batch {i // BATCH_SIZE} of {len(y_train)//BATCH_SIZE}, Loss: {loss}", end="")
 
 
 
@@ -186,6 +182,8 @@ for e in range(EPOCHS):
 	train_acc = evaluate(x_train, y_train)
 	test_acc = evaluate(x_test, y_test)
 
-	print(f"Training Accuracy: {train_acc}")
-	print(f"Test Accuracy: {test_acc}")
+	#print(f"Training Accuracy: {train_acc}")
+	#print(f"Test Accuracy: {test_acc}")
+	print(train_acc)
+	print(test_acc)
 
