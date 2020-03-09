@@ -15,7 +15,8 @@ Activation | `RELU`
 Monte Carlo Iterations | `10`
 Data Augmentation | Random vertical and/or horizontal flips
 
-![res](dropout-res.png)
+<img src="dropout-res.png" alt="res" width="550px"/>
+
 
 As observed from the plots above, the accuracies achieved for both the training and testing set increase more smoothly when applying the monte carlo simulation to the prediction. The heuristic rule is automatically used py pytorch when the model is in "eval-mode", whereas as the monte carlo simulation was implemented by running forward propagation a number of times during evaluation and using the average of the iterations as a basis for prediction. (see line 100-107 in the code).
 
