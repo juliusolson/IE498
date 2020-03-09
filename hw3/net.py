@@ -112,11 +112,9 @@ def evaluate(loader, monte_carlo=False):
 	return acc
 
 
-
+print("Model setup...")
 model = Net()
 model.cuda()
-
-print("Model setup...")
 
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=LR)
@@ -172,10 +170,11 @@ for e in range(EPOCHS):
 	
 	print(f"Average Loss {epoch_loss/len(train_loader)}")
 	if not MONTE_CARLO:
-		model.eval() # model.eval defaults to using heuristic
+		# Do not switch to eval-mode, as it uses heuristic rule prediction
+		model.eval() 
 
 	train_acc = evaluate(train_loader, monte_carlo=MONTE_CARLO)
 	test_acc = evaluate(test_loader, monte_carlo=MONTE_CARLO)
 	
-	print("Train Accuarcy: ", train_acc, "Test Accuracy: ", test_acc)
+	print(f"Train Accuracy: {train_acc}, Test Accuracy: {test_acc}")
 

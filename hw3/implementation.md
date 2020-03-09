@@ -4,20 +4,20 @@
 
 ## Result
 
-A test accuracy of `82.3%` was reached using the following parameters in combination with monte carlo. `80.4%` Was reached using the same parameters but with heuristic eval
+A test accuracy of `82.3%` was reached using the following parameters in combination with monte carlo simulation. `80.4%` Was reached using the same parameters but with heuristic eval
 
 Param      | Value
 -----------|--------
 Epochs   | `15`
 LR       | `0.0005`
+Optimizer | `ADAM`
 Activation | `RELU`
 Monte Carlo Iterations | `10`
 Data Augmentation | Random vertical and/or horizontal flips
 
 ![res](dropout-res.png)
 
-
-As observed from the plots above, the process of training seemed to run a bit smoother when utlizing monte carlo simulations instead of the heurisitcs. The heuristic rule is automatically used py pytorch when the model is in "eval-mode", whereas as the monte carlo simulation was implemented by running forward propagation a number of times and using the average of the iterations as a basis for prediction. (see line 100-107 in the code).
+As observed from the plots above, the accuracies achieved for both the training and testing set increase more smoothly when applying the monte carlo simulation to the prediction. The heuristic rule is automatically used py pytorch when the model is in "eval-mode", whereas as the monte carlo simulation was implemented by running forward propagation a number of times during evaluation and using the average of the iterations as a basis for prediction. (see line 100-107 in the code).
 
 ## Implementation
 
@@ -78,3 +78,5 @@ The architecture is based on that of the network provided as an example in class
 python net.py
 
 ``` 
+
+Requires python 3.6 or above due to f-string formatting.
