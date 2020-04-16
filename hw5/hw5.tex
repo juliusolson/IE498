@@ -7,12 +7,14 @@
 \usepackage{bbm}
 \usepackage{listings}
 \usepackage{xcolor}
- 
+\usepackage{enumitem}
+\usepackage{algorithm2e}
+
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
 \definecolor{backcolour}{rgb}{1,1,1}
- 
+
 \lstdefinestyle{mystyle}{
     backgroundcolor=\color{backcolour},   
     commentstyle=\color{codegreen},
@@ -20,15 +22,15 @@
     numberstyle=\tiny\color{codegray},
     stringstyle=\color{codepurple},
     basicstyle=\ttfamily\footnotesize,
-    breakatwhitespace=false,         
-    breaklines=true,                 
-    captionpos=b,                    
-    keepspaces=true,                 
-    numbers=left,                    
-    numbersep=5pt,                  
-    showspaces=false,                
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,                 
+    keepspaces=true,
+	numbers=left,                   
+    numbersep=5pt,               
+    showspaces=false,          
     showstringspaces=false,
-    showtabs=false,                  
+    showtabs=false,
     tabsize=2
 }
  
@@ -44,7 +46,7 @@
 \parskip = \baselineskip
 
 \pagestyle{fancy}
-\lhead{Julius Olson - DD2434 A2}
+\lhead{Julius Olson - IE598 HW5}
 \rhead{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0.4pt}
@@ -57,4 +59,136 @@
 \maketitle
 
 \thispagestyle{fancy}
+
+\section{Backpropagation}
+\begin{enumerate}[label=(\alph*)]
+	\item \begin{enumerate}[label=(\roman*)]
+		\item $$\frac{\partial \rho}{\partial f} = \frac{\partial (y - f(x; \theta))^2}{\partial f} = -2(y - f(x; \theta)) = 2 (f(x; \theta) - y) = \delta^4 \in \mathbb{R}$$
+	\item \begin{align*}&\frac{\partial \rho}{\partial b^3} = \frac{\partial \rho}{\partial f}\frac{\partial f}{\partial b^3} = \delta^4 \cdot 1 = \delta^4 &&\in \mathbb{R} \\ & \frac{\partial \rho}{\partial W^3} = \delta^4\left(H^2\right)^T &&\in \mathbb{R}^{1 \times d_h}\end{align*}
+		\item $$\frac{\partial \rho}{\partial Z^2} = \frac{\partial \rho}{\partial f}\frac{\partial f}{\partial H^2}\frac{\partial H^2}{\partial Z^2} = \left(W^3\right)^T\delta^4 \odot \sigma'(Z^2) = \delta^3 \in \mathbb{R}^{d_h \times 1}$$
+		\item \begin{align*}
+			&\frac{\partial \rho}{\partial b^2} = \frac{\partial \rho}{\partial Z^2}\frac{\partial Z^2}{\partial b^2} = \delta^3 \cdot 1 = \delta^3 && \in \mathbb{R}^{d_h \times 1} \\
+			&\frac{\partial \rho}{\partial W^2} = \frac{\partial \rho}{\partial Z^2}\frac{\partial Z^2}{\partial W^2} = \delta^3 \left(H^1\right)^T && \in \mathbb{R}^{d_h \times d_h}
+		\end{align*}
+		\item $$\frac{\partial \rho}{\partial Z^1} = \frac{\partial \rho}{\partial Z^2}\frac{\partial Z^2}{\partial H^1}\frac{\partial H^1}{\partial Z^1} = \left(W^2\right)^T\delta^3 \odot \sigma'(Z^1) = \delta^2 \in \mathbb{R}^{d_h \times 1}$$
+		\item \begin{align*}
+			&\frac{\partial \rho}{\partial b^1} = \frac{\partial \rho}{\partial Z^1}\frac{\partial Z^1}{\partial b^1} = \delta^2 \cdot 1 = \delta^2 && \in \mathbb{R}^{d_h \times 1} \\
+			&\frac{\partial \rho}{\partial W^1} = \frac{\partial \rho}{\partial Z^1}\frac{\partial Z^1}{\partial W^1} = \delta^2 \left(x\right)^T && \in \mathbb{R}^{d_h \times d}
+		\end{align*}
+	\end{enumerate}
+	\item 
+		\begin{itemize}
+			\item For iteration $k = 0, 1, ...$ \\
+			Select a data sample $(x, y)$ at random from $\left(x^i, y^i\right)_{i=1}^M$
+			\item Calculate the gradients $G^k = \nabla_{\theta}\rho(f(x; \theta^k), y)$
+			\item Update the parameters: $\theta^{k+1} = \theta^k - \alpha^kG^k$
+			\item In this case this amounts to:
+			\item \begin{align*}
+					&\left(b^3\right)^{k+1} = \left(b^3\right)^k - \alpha^k\delta^4 \\
+					&\left(W^3\right)^{k+1} = \left(W^3\right)^k - \alpha^k\delta^4\left(H^2\right)^T \\
+					&\left(b^2\right)^{k+1} = \left(b^2\right)^k - \alpha^k\delta^3 \\
+					&\left(W^2\right)^{k+1} = \left(W^2\right)^k - \alpha^k\delta^3\left(H^1\right)^T \\
+					&\left(b^1\right)^{k+1} = \left(b^1\right)^k - \alpha^k\delta^2 \\
+					&\left(W^1\right)^{k+1} = \left(W^1\right)^k - \alpha^k\delta^2\left(x\right)^T \\
+				\end{align*}
+		\end{itemize}
+\end{enumerate}
+
+\section{Stochastic Gradient Descent}
+\begin{enumerate}[label=(\alph*)]
+	\item When using gradient descent to train a neural network we are only guaranteed to reach a local minimum. As there often are many local minima, there exists many different parameters $\theta$ that we could end up with at convergence. There is no guarantee that these parameters ($\theta^1$ and $\theta^2$) in this case will be similar. 
+	\item The theorem only states that the approximation error $\epsilon$ will be achieved when reaching a global minimum of the objective function. When using stochastic gradient descent we are however not guaranteed to reach a global minimum due to the non-convexity of the function. Thus, the SGD approach can result in reaching a local minimum at convergence. In the case that this happens an approximation within $\epsilon$ will not be achieved. 
+	\item  The vanishing gradient problem refers to the fact that the gradients in the lower layers ($l<< L$) of a neural network decrease in magnitude as the number of layers $L$ grows. Therefore the problem is especially noticeable in deep neural models. As the gradients become smaller, the convergence rate decreases drastically as each step updates the parameters of the lower layers at a slower rate. The problem can also occur due to saturation, i.e. the input of the hidden units is to large as $\lim_{||z|| \rightarrow \infty} \sigma'(z) = 0$. \\ One solution is to use residual blocks in the network. In such block connections to the earlier layers in the network is provided and the output of a block is denoted as $F(x) + x$. Thus the derivative of the block will be larger as the residual connection does not pass through the activation function. Another solution is to use another type of activation function that doesn't squash the derivate to small values. An example of such a function would be the ReLU.
+	\item $$F_{softmax}(\mathbf{z}) = \frac{1}{\sum_{k=0}^{K-1}}\left(e^{z_0}, e^{z_1}, ..., e^{z_{K-1}}\right)$$
+	\item \begin{align*}
+		&\sum_{k=0}^{\infty} \alpha_k = \infty && (1)\\
+		&\sum_{k=0}^{\infty} \left(\alpha_k \right)^2 < \infty && (2)
+	\end{align*}
+	The two requirements above have to be fulfilled by the learning rate in order to reach convergence. $k$ refers to the iteration. An example of a learning rate function that meets these requirements is $\alpha_k = \frac{C_0}{C_1 + k}$, where $C_0, C_1$ are constants.
+	\item \begin{enumerate}[label=(\roman*)]
+		\item \textbf{Dropout} (reduces model complexity):
+		\begin{align*}
+			&R = \left\{R^1, ..., R^L\right\}, \ R^l \in \mathbb{R}^N, \ R^l_i \sim Ber(p) \\
+			&Z^l = W^lH^{l-1} + b^l \\
+			&H^l = R^l \odot \sigma(Z^l)\\
+			&f(X, R, \theta) = F_{softmax}\left(W^{L+1}H^L + b^{L+1}\right)
+		\end{align*}
+		$R^l$ is the mask for layer $l$ and is applied by piecewise multiplication. As $R^l_i$ are independent Bernoulli random variables, they either take the value 0 or 1. As such the mask removes some of the hidden units in the layer, and the complexity is thus reduced.
+		\item \textbf{L2 Regularization}:
+	The cost function is altered by penalizing large values of weights. The result is reduced overfitting. The second term in the formula below is the L2 regularization term.
+	$$Cost = \rho(f(X; \theta), Y) + \lambda ||\theta||^2$$ 
+	\end{enumerate}
+\end{enumerate}
+
+\section{Training Algorithms}
+\begin{enumerate}[label=(\alph*)]
+	\item RMSProp is an example of an adaptive learning rate algorithm, where the learning rate of each step is dependent on the learning rate of the previous step and the current gradient. The algorithm is defined as: $$r^{l} = \rho r^{l-1} + (1-\rho)(g^{l})^2$$ $$\theta^{l} = \theta^{l-1} - \frac{\eta}{\sqrt{r^l + \epsilon}}\odot g^{l}$$ $$g^l = \nabla_{\theta} \mathcal{L}(\theta^l)$$
+	\item Using standard SGD with a constant learning rate, two problems can occur. If the gradient is steep, each step taken will be quite far and thus the risk of overshooting the optimum is present. In regions where hte gradient is flat, the opposite problem occurs as the algorithm results in short step and thus a very slow convergence rate. RMSProp adapts the learning rate to the gradient in order to counteract these problems, taking smaller steps when the gradient is large and vice versa. 
+	\item Deep Q-Learning is an example of reinforcement learning. There exists a set of states $X$, a set of actions $A$ applicable in each state by which the agent transitions from state to state. The purpose of the reinforcement learning is to assign the agent a numerical value called reward for executing a certain action $a$ in a given state $X_t$. To select the optimal action at each state, a strategy $A_t = g(X_t)$ has to be learned. In deep q-learning a deep neural network is utilized to model/approximate the Q-value function to determine the optimal action. The problem becomes a regression problem with objective function defined as: $$J(\theta_t) = \left(Y_t - Q(X_t, A_t; \theta_t)\right)^2$$ $$Y_t = R(X_t, A_t) + \gamma Q\left(X_{t+1}, \arg \max_{a} Q(X_{t+1}, a; \theta_t); \theta_t\right)$$
+	\item The $\epsilon$-Greedy algorithm is commonly used. 
+	$$A_t = \begin{cases} Uniform(a_1, ..., a_k) \ \ \ \ \ \ \ \ \ \text{with probability $\epsilon$} \\ \arg \max_{a \in \mathcal{A}}Q(X_t, a'; \theta) \ \ \ \ \text{with probability $1-\epsilon$} \end{cases}$$
+	As the the number of epochs increases, $\epsilon$ is usually decreased in order to more often take the greedy action given by the model. 
+\end{enumerate}
+
+\section{Initialization and Normalization}
+
+\begin{enumerate}[label=(\alph*)]
+	\item \begin{align*}
+		&\mu_B = \frac{1}{M} \sum_{i=1}^M Z^l_i \\
+		&\sigma_B^2 = \frac{1}{M}\sum_{i=1}^M \left(Z^l_i - \mu_{B,i}\right) \\
+		&\hat{Z}_i^l = \frac{Z^l_i - \mu_{B,i}}{\sqrt{\sigma^2_{B,i} + \epsilon}} \\
+		&BN_{\theta}\left(Z^l\right) = \gamma \odot \hat{Z}^l + \beta
+	\end{align*}
+	The algorithm above explains how each layer is normalized using statistics from the minibatch (of size $M$). The parameters $\gamma$ and $\beta$ in the last step are additional, and can be learned as well.  
+	\item While batch normalization obtains its normalization from a batch of inputs, layer normalization normalizes across the dimensions of a hidden layer for a single data sample. It is thus an exact normalization instead of an approximate, which is the result of batch normalization. 
+	\item Xavier Initialization is a way to initialize the weights of a layer in order to achieve a mean of 0 and variance of 1 for the outputs $z_i$ in the layer. This is done in order to combat saturation of the hidden units. Each weight is initialized as a random variable according to ($d_{in}$ refers to the dimension of the input): $$w_i \sim \mathcal{N}\left(0, \frac{1}{d_{in}}\right)$$
+	\item \begin{align*}
+		&x \in \mathbb{R}^d \\
+		&Z = Wx + b^1 \\
+		&H = ReLU(Z) \\
+		&f(x; \theta) = C^TH + b^2 \\
+		&\rho\left(f(x; \theta), y\right) = \left(y - f(x; \theta)\right)^2
+	\end{align*}
+	Let C, W and b in the network above be initialized with only zeros. The backpropagation is as follows (not all terms included for simplicity):
+	\begin{align*}
+		&\frac{\partial \rho}{\partial f} = -2(y - f(x; \theta)) \\
+		&\frac{\partial \rho}{\partial C} = \frac{\partial \rho}{\partial f} H^T\\
+		&\frac{\partial \rho}{\partial H} = \delta = C^T \frac{\partial \rho}{\partial f} \\
+		&\frac{\partial \rho}{\partial b^1} = \delta \odot ReLU'(Z) \\
+		&\frac{\partial \rho}{\partial W} = \left(\delta \odot ReLU'(Z) \right)x^T
+	\end{align*}
+	If all weight are initialized as zero, the output in the first layer ($Z$) will also be zero. This leads to the gradient w.r.t to $C$ also being equal to zero. The same goes for $\delta$ and the gradient w.r.t $b^1$ and $W$. As such none of the parameter's value will change during backpropagation and thus the network will not train.
+	\item Using ensemble models is a good way to reduce variance in the resulting model by averaging the output/prediction of several models. In this case the averaging is done over the parameters which are then used in a "new" model. Therefore the formula is not a mathematically correct ensemble model and should be altered as follows: $$g(x) = \frac{1}{M} \sum_{m=1}^M f(x; \theta^m)$$
+
+\end{enumerate}
+
+\section{Convolutional Networks}
+\begin{enumerate}[label=(\alph*)]
+	\item Consider a convolution between a kernel $K \in \mathbb{R}^{k_y \times k_x \times C_{out} \times C_{in}}$ and a padded input $\hat{X} \in \mathbb{R}^{d_y+2P \times d_x+2P \times C_{in}}$. $C_{in}$ and $C_{out}$ represent the number of input and output channels respectively, $k_y$ and $k_x$ are the filter dimensions and $d_y$ and $d_x$ are the dimensions of the input for one channel. $P$ is the number of zeros added to each side of the input. The resulting output is denoted as: $Z_{:, :, p} = \hat{X}_{:, :} * K_{:, :, p}$. Given a stride length of $s$, the operation is formulated as: $$Z_{i, j, p} = \sum_{p'=0}^{C_{in}-1}\sum_{m=0}^{k_y-1}\sum_{n=0}^{k_x-1} K_{m, n, p, p'}\hat{X}_{is+m, js+n, p'}$$ \\ The output ($Z$) will be of the following dimensions: $$\left(\lceil \frac{d_y - k_y + 2P}{s}+1 \rceil\right) \times \left(\lceil \frac{d_x - k_x + 2P}{s}+1 \rceil\right) \times C_{out}$$
+	\item Using convolutions we are able to extract important features from e.g. images using much fewer parameters than fully connected, due to the parameter sharing that is a result of the convolutional operation. The resulting convolutional models are thus much more efficient to train than their fully connected counterpart (both regarding computational and memory efficiency). Furthermore, the convolutional operation is invariant (equivariant) to translation. This means that the result of a convolution over an image that has been subjected to a translative function is the same as if one were to translate the output of the convolution over the original image with the same function. Convolutions can be thought of as a way of filtering the input in order to extract the useful information and filter out the unimportant aspects of the input. 
+	\item \begin{itemize}
+		\item Stride ($s$): This hyperparameter equals the step size with which each filter moves over the input. A larger stride results in more downsampling as the overlap between receptive fields of the convolution decrease, and therefore the output will be of smaller dimensions.
+		\item Padding ($P$): The amount of zeros that are added to each side of the input. Without padding, the dimensions of the output decrease for each convolutional layer that is applied in the network. By padding the inputs, we are able to preserve more of the input volume and thus are able to apply more layers and therefore get a more accurate analysis of the input.
+		\item Channels ($C_{in}, C_{out}$): The number of the channels of the initial input of the network is dictated by which type of data is used. E.g. for a color image, there are one channel for each color. The output channels can be considered as a stack of feature maps in the resulting hidden layer. Increasing the amount of feature maps allow for the detection of more complex features in the input. 
+	\end{itemize}
+	\item The output dimensions are given by the following formula: $$\left(\big{\lceil} \frac{d_y - k_y + 2P}{s}+1 \rceil\right) \times \left(\lceil \frac{d_x - k_x + 2P}{s}+1 \rceil\right) \times C_{out}$$ $$ = \left(\frac{30 - 3}{1}+1\right) \times \left(\frac{30 - 3}{1}+1\right) \times C = 28 \times 28 \times C$$
+	\item $$I \in \mathbb{R}^{C_{in} \times d_x \times d_y \times d_z}, \ K \in \mathbb{R}^{C_{out} \times C_{in} \times k_x \times k_y \times k_z}$$ $$Z_{p, i, j, q} = \sum_{p'=0}^{C_{in}-1}\sum_{m=0}^{k_y-1}\sum_{n=0}^{k_x-1}\sum_{r=0}^{k_z-1}K_{p, p', m,n,r}I_{p', i+m, j+n, q+r}$$
+\end{enumerate}
+
+\section{Pytorch and Implementation Questions}
+
+\begin{enumerate}[label=(\alph*)]
+	\item Using float16 instead of float32 would enable larger models (and datasets) to be stored in memory on the CPU/GPU as each value uses less of the available memory. Furthermore, the training would be faster as the needed arithmetic bandwidth would be reduced. 
+	\item The computational cost for the backpropagation for mini-batch gradient descent is defined as: $M\left[(L-1)(3d_H^2+d_H)+d_H(2d_H+d+3K+1)+2K\right]$ and therefore grows linearly when increasing the size of the mini batch ($M$). The required memory for the backpropagation is defined as $(L-1)(d_H^2+d_H)+d_H(d+K)+K+2Md_H$ and hence also grows linearly when increasing the batch size ($M$). 
+	\item This can be done by loading the dataset into memory in batches. In pytorch this can be achieved using a dataloader. 
+	\item \lstinline{opimizer.step()} is used to update the parameters of the model according to the calculated gradients (stored in \lstinline{param.grad}). If it is omitted, the parameters simply will not be updated and the model will not train.
+	\item \lstinline{optimizer.zero_grad()} Sets the gradients of the parameters to zero. This done as the gradients are otherwise accumulated for each parameters, and therefore takes up much memory.
+	\item Either \lstinline{tensor.to(device)} (if \lstinline{device == "cuda"}) or simply \lstinline{tensor.cuda()} moves the tensor to the GPU. 
+	\item \lstinline{dist.all_reduce(g, op=dist.reduce_op.SUM); g /= float(N)}. The first command gathers all the gradients and sums them, and the second divides with the number of nodes and thus the combination of the two results in the average.
+	\item When calculating the gradient at a step, the loss is obtained by the sum of the loss at each previous step. Even though the gradient is only calculated at every $k\tau, \ k = 1, ... \infty$ time steps, the gradient at that point is dependent on the loss of all the precious steps $t = 1, ..., k\tau -1$ as truncation is not used. Therefore the complexity grows towards infinity at a linear rate.
+	\item When using truncated backpropagation through time, the loss is calculated as: $$\mathcal{L}(\theta^{(k)}) = \sum_{t = \tau k + 1}^{(k+1) \tau} \rho(Y_t, \hat{Y}_t)$$
+	And the computational cost is therefore $\mathcal{O}(\tau)$.
+\end{enumerate}
+
+
 \end{document}
